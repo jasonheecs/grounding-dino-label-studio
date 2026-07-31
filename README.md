@@ -12,27 +12,9 @@ free-text prompt (e.g. `watermelon.`).
 
 ## First-time setup
 
-1. Create a `.env` file with:
-   ```
-   LABEL_STUDIO_API_KEY=<a Label Studio refresh token, only used for its own settings/admin calls>
-   LABEL_STUDIO_LEGACY_TOKEN=<a non-expiring legacy API token — see "Auth" below for why>
-   ```
-2. Run `./start.sh` — clones `label-studio-ml-backend` (if not already present), checks out the pinned base commit, applies our local fixes patch (see [patches/](patches/) and "Local patches" below), then builds and starts everything with `docker compose up -d --build`. Safe to re-run any time — it skips the clone/patch steps if they're already done.
-3. In Label Studio (`http://localhost:8080`), open your project → Settings → Machine Learning → Add Model, pointing at `http://grounding-dino-ml-backend:9090`. Enable **interactive predictions**.
+1. Run `./start.sh`. On first run (no `.env` yet) it generates one with a fresh admin username/password and API token. It prints the generated username/password once — save those if you want to log into the UI. Safe to re-run any time: it skips credential generation, cloning, and patching if they're already done.
 
-<details>
-<summary>What <code>start.sh</code> does under the hood / doing it manually</summary>
-
-```
-git clone https://github.com/HumanSignal/label-studio-ml-backend
-cd label-studio-ml-backend
-git checkout "$(cat ../patches/grounding-dino-local-fixes.commit)"
-git apply ../patches/grounding-dino-local-fixes.patch
-cd ..
-docker compose up -d --build
-```
-
-</details>
+2. In Label Studio (`http://localhost:8080`), open your project → Settings → Machine Learning → Add Model, pointing at `http://grounding-dino-ml-backend:9090`. Enable **interactive predictions**.
 
 ## Labeling config
 
@@ -63,15 +45,31 @@ each fruit class, e.g.:
 
 ## Auth
 
-`LABEL_STUDIO_ACCESS_TOKEN`/`LABEL_STUDIO_API_KEY` are set to a **legacy API
-token**, not the default JWT refresh token Label Studio shows you by default.
-The ML backend sends whatever token it's given straight through as a Bearer
-credential to fetch task images — refresh tokens aren't valid for that (only
-short-lived access tokens are, which expire in 5 minutes — too short to
-hardcode). `LABEL_STUDIO_ENABLE_LEGACY_API_TOKEN=true` is set on the
-`label-studio` service to allow generating one; enable it for the org via
-Django admin or `POST /api/jwt/settings` if not already on, then set
-`LABEL_STUDIO_LEGACY_TOKEN` in `.env` to that token.
+The single `.env` key `LABEL_STUDIO_LEGACY_TOKEN` is the one source of truth
+for auth, and `start.sh` generates it for you on first run — there's nothing
+to set up by hand. It's used two ways:
+
+- On the `label-studio` service, it's passed as `LABEL_STUDIO_USER_TOKEN`
+  (alongside `LABEL_STUDIO_USERNAME`/`LABEL_STUDIO_PASSWORD`), which Label
+  Studio's Docker image uses to non-interactively provision a default admin
+  account with that exact token at startup — no UI signup required.
+- On `grounding-dino-ml-backend`, the *same* value is passed as both
+  `LABEL_STUDIO_ACCESS_TOKEN` and `LABEL_STUDIO_API_KEY` (container env var
+  names the ML backend's code expects. The ML backend
+  sends this straight through as a Bearer credential to fetch task images,
+  which requires a **legacy API token**, not the short-lived JWT access
+  tokens Label Studio issues by default (those expire in 5 minutes — too
+  short to hardcode, and refresh tokens aren't valid for this at all).
+  `LABEL_STUDIO_ENABLE_LEGACY_API_TOKEN=true` on the `label-studio` service
+  is what makes a legacy-style token valid in the first place.
+
+`start.sh` verifies this token actually authenticates (via
+`/api/current-user/whoami`) before declaring startup successful. If that
+check fails — e.g. after copying this project without going through
+`start.sh`'s generation step — the fallback is to log into
+`http://localhost:8080`, enable legacy tokens for your org (Organization →
+API Tokens Settings, or `POST /api/jwt/settings`), grab a token from there,
+and set `LABEL_STUDIO_LEGACY_TOKEN` in `.env` to it manually.
 
 ## Local patches on top of the upstream `grounding_dino` example
 

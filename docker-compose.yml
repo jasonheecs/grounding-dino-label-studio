@@ -5,6 +5,9 @@ services:
       - "8080:8080"
     environment:
       - LABEL_STUDIO_ENABLE_LEGACY_API_TOKEN=true
+      - LABEL_STUDIO_USERNAME=${LABEL_STUDIO_USERNAME}
+      - LABEL_STUDIO_PASSWORD=${LABEL_STUDIO_PASSWORD}
+      - LABEL_STUDIO_USER_TOKEN=${LABEL_STUDIO_LEGACY_TOKEN}
     volumes:
       - ./mydata:/label-studio/data
     networks:
