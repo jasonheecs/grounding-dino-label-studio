@@ -42,7 +42,7 @@ generate_env_if_missing() {
     gen_password="$(openssl rand -base64 24)"
     local gen_token
     gen_token="$(openssl rand -hex 20)"
-    cat > "$SCRIPT_DIR/.env" <<EOF
+    cat >"$SCRIPT_DIR/.env" <<EOF
 LABEL_STUDIO_USERNAME=$gen_username
 LABEL_STUDIO_PASSWORD=$gen_password
 LABEL_STUDIO_LEGACY_TOKEN=$gen_token
