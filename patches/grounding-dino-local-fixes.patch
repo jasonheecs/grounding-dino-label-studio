@@ -1,0 +1,107 @@
+--- a/label_studio_ml/examples/grounding_dino/Dockerfile
++++ b/label_studio_ml/examples/grounding_dino/Dockerfile
+@@ -4,8 +4,6 @@
+ 
+ WORKDIR /app
+ 
+-RUN conda update conda -y
+-
+ RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
+     --mount=type=cache,target="/var/lib/apt/lists",sharing=locked \
+     apt-get -y update \
+@@ -42,6 +40,12 @@
+ 
+ WORKDIR /app
+ 
++# groundingdino's unpinned deps pull in numpy>=2 (breaks the numpy 1.x ABI this
++# pinned torch build (2.1.2) was compiled against) and a transformers release
++# too new for torch 2.1.2's BERT text-encoder loading path
++RUN --mount=type=cache,target=${PIP_CACHE_DIR},sharing=locked \
++    pip3 install "numpy<2" "transformers==4.39.3"
++
+ # install test requirements if needed
+ COPY requirements-test.txt .
+ # build only when TEST_ENV="true"
+--- a/label_studio_ml/examples/grounding_dino/dino.py
++++ b/label_studio_ml/examples/grounding_dino/dino.py
+@@ -90,11 +90,26 @@
+         logger.info(f"Thresholds: {out}")
+         return out
+ 
+-    def get_results(self, all_points, all_scores, all_lengths, from_name_r, to_name_r):
++    def _match_label(self, phrase: str, labels: List[str]) -> Optional[str]:
++        phrase_l = phrase.lower().strip()
++        for label in labels:
++            label_l = label.lower()
++            if label_l == phrase_l or label_l in phrase_l or phrase_l in label_l:
++                return label
++        return None
+ 
++    def get_results(self, all_points, all_scores, all_phrases, all_lengths, from_name_r, to_name_r):
++
++        labels = self.parsed_label_config[from_name_r]['labels']
++
+         results = []
+         total_score = 0
+-        for points, scores, lengths in zip(all_points, all_scores, all_lengths):
++        for points, scores, phrase, lengths in zip(all_points, all_scores, all_phrases, all_lengths):
++            matched_label = self._match_label(phrase, labels)
++            if matched_label is None:
++                logger.warning(f"Detected phrase '{phrase}' did not match any of the configured labels {labels}; skipping box")
++                continue
++
+             # random ID
+             label_id = str(uuid4())[:9]
+ 
+@@ -114,7 +129,8 @@
+                     'width': (points[2] - points[0]) / width * 100,
+                     'height': (points[3] - points[1]) / height * 100,
+                     'x': points[0] / width * 100,
+-                    'y': points[1] / height * 100
++                    'y': points[1] / height * 100,
++                    'rectanglelabels': [matched_label],
+                 },
+                 'score': score,
+                 'type': 'rectanglelabels',
+@@ -136,7 +152,7 @@
+         prompt = prompt_control['prompt']
+         if not prompt:
+             logger.warning("Prompt not found")
+-            ModelResponse(predictions=[])
++            return ModelResponse(predictions=[])
+ 
+         from_name_r, to_name_r, value = self.get_first_tag_occurence('RectangleLabels', 'Image')
+ 
+@@ -146,6 +162,7 @@
+ 
+         all_points = []
+         all_scores = []
++        all_phrases = []
+         all_lengths = []
+         raw_img_path = task['data'][value]
+ 
+@@ -160,7 +177,7 @@
+ 
+         src, img = load_image(img_path)
+ 
+-        boxes, logits, _ = predict(
++        boxes, logits, phrases = predict(
+             model=groundingdino_model,
+             image=img,
+             caption=prompt,
+@@ -175,12 +192,13 @@
+ 
+         points = boxes_xyxy.cpu().numpy()
+ 
+-        for point, logit in zip(points, logits):
++        for point, logit, phrase in zip(points, logits, phrases):
+             all_points.append(point)
+             all_scores.append(logit)
++            all_phrases.append(phrase)
+             all_lengths.append((H, W))
+ 
+-        predictions = self.get_results(all_points, all_scores, all_lengths, from_name_r, to_name_r)
++        predictions = self.get_results(all_points, all_scores, all_phrases, all_lengths, from_name_r, to_name_r)
+ 
+         if not context:
+             if prompt:

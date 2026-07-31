@@ -1,0 +1,5 @@
+mydata/*
+!mydata/.gitkeep
+.env
+.claude/
+label-studio-ml-backend/

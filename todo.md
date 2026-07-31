@@ -1,0 +1,2 @@
+- add video to README
+- submit patches to upstream?

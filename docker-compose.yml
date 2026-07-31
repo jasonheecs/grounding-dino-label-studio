@@ -1,0 +1,32 @@
+services:
+  label-studio:
+    image: heartexlabs/label-studio:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - LABEL_STUDIO_ENABLE_LEGACY_API_TOKEN=true
+    volumes:
+      - ./mydata:/label-studio/data
+    networks:
+      - ls-net
+
+  grounding-dino-ml-backend:
+    build: ./label-studio-ml-backend/label_studio_ml/examples/grounding_dino
+    ports:
+      - "9090:9090"
+    environment:
+      - LABEL_STUDIO_HOST=http://label-studio:8080
+      - LABEL_STUDIO_ACCESS_TOKEN=${LABEL_STUDIO_LEGACY_TOKEN}
+      - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_LEGACY_TOKEN}
+      - BOX_THRESHOLD=0.20
+      - TEXT_THRESHOLD=0.20
+    volumes:
+      - ./mydata/grounding-dino:/data
+    depends_on:
+      - label-studio
+    networks:
+      - ls-net
+
+networks:
+  ls-net:
+    driver: bridge
