@@ -9,7 +9,7 @@ REPO_URL="https://github.com/HumanSignal/label-studio-ml-backend"
 PATCH_FILE="$SCRIPT_DIR/patches/grounding-dino-local-fixes.patch"
 PINNED_COMMIT="$(cat "$SCRIPT_DIR/patches/grounding-dino-local-fixes.commit")"
 
-if command -v podman >/dev/null 2>&1 && podman compose version >/dev/null 2>&1; then
+if command -v podman >/dev/null 2>&1 && podman compose ps >/dev/null 2>&1; then
   COMPOSE=(podman compose)
 else
   COMPOSE=(docker compose)

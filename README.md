@@ -15,9 +15,11 @@ free-text prompt (e.g. `watermelon.`).
 
 ## First-time setup
 
-1. Run `./start.sh`. On first run (no `.env` yet) it generates one with a fresh admin username/password and API token. It prints the generated username/password once — save those if you want to log into the UI. Safe to re-run any time: it skips credential generation, cloning, and patching if they're already done.
+1. - **Large images can OOM the backend.** Docker Desktop's memory allocation (~4.8GB) is tight for Grounding DINO's CPU inference on multi-megapixel images. Raising Docker Desktop's memory limit (Settings → Resources → Memory → 8GB+) helps. If you're using Podman, bump the machine's memory: `podman machine set --memory 8192 podman-machine-default`.
 
-2. In Label Studio (`http://localhost:8080`), open your project → Settings → Machine Learning → Add Model, pointing at `http://grounding-dino-ml-backend:9090`. Enable **interactive predictions**.
+2. Run `./start.sh`. On first run (no `.env` yet) it generates one with a fresh admin username/password and API token. It prints the generated username/password once — save those if you want to log into the UI. Safe to re-run any time: it skips credential generation, cloning, and patching if they're already done.
+
+3. In Label Studio (`http://localhost:8080`), open your project → Settings → Machine Learning → Add Model, pointing at `http://grounding-dino-ml-backend:9090`. Enable **interactive predictions**.
 
 ## Labeling config
 
@@ -101,5 +103,4 @@ The patch applies these fixes on top of upstream (`HumanSignal/label-studio-ml-b
 
 ## Known limitations / open items
 
-- **Large images can OOM the backend.** Docker Desktop's memory allocation (~4.8GB) is tight for Grounding DINO's CPU inference on multi-megapixel images. Raising Docker Desktop's memory limit (Settings → Resources → Memory → 8GB+) helps
 - **Dense, near-identical objects (e.g. many touching fruit slices) can under-detect** — Grounding DINO does no NMS/box-merging, so this shows up as too few boxes rather than merged ones. Tuning options, cheapest first: rephrase the prompt (see above), lower `BOX_THRESHOLD`/`TEXT_THRESHOLD` further (currently `0.20`/`0.20`), or switch to the larger `SwinB` checkpoint (already downloaded in the image — set `GROUNDING_DINO_CONFIG=GroundingDINO_SwinB_cfg.py` and `GROUNDING_DINO_WEIGHTS=groundingdino_swinb_cogcoor.pth`). If it still under-detects after all of that, that's a real limit of zero-shot grounding models on this kind of scene, not a config problem — manual correction is the fallback.
