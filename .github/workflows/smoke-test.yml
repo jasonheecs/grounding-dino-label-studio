@@ -1,0 +1,60 @@
+name: Smoke test
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "start.sh"
+      - "docker-compose.yml"
+      - "patches/**"
+      - ".github/workflows/smoke-test.yml"
+  pull_request:
+    paths:
+      - "start.sh"
+      - "docker-compose.yml"
+      - "patches/**"
+      - ".github/workflows/smoke-test.yml"
+  workflow_dispatch:
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free up disk space
+        run: |
+          echo "==> Disk usage before cleanup:"
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          echo "==> Disk usage after cleanup:"
+          df -h /
+
+      - name: Run start.sh
+        run: ./start.sh
+
+      - name: Verify grounding-dino-ml-backend is healthy
+        run: |
+          if ! curl -sf http://localhost:9090/health >/dev/null; then
+            echo "ERROR: grounding-dino-ml-backend is not healthy after start.sh completed." >&2
+            exit 1
+          fi
+          echo "==> grounding-dino-ml-backend health check passed."
+
+      - name: Verify container state
+        run: |
+          docker compose ps --format json | tee /tmp/compose-ps.json
+          if ! jq -s -e '[.[] | select(.State | test("restarting|exited|dead"))] | length == 0' /tmp/compose-ps.json >/dev/null; then
+            echo "ERROR: one or more containers are not running cleanly." >&2
+            exit 1
+          fi
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Clean up containers
+        if: always()
+        run: docker compose down --remove-orphans
