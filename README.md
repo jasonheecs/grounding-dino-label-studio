@@ -5,6 +5,9 @@ Local Label Studio deployment with a zero-shot object detection ML backend
 labeling bounding boxes on images. Grounding DINO detects objects from a
 free-text prompt (e.g. `watermelon.`).
 
+## Prerequisites
+- `docker compose` or `podman compose` — `start.sh` prefers Podman if it's installed and its machine/socket is running, otherwise falls back to Docker. If you have Podman installed but see `docker: command not found`, run `podman machine start` first.
+
 ## Services
 
 - **`label-studio`** — the Label Studio server (`heartexlabs/label-studio:latest`), on `http://localhost:8080`. Data persists in `./mydata`.

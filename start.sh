@@ -9,6 +9,12 @@ REPO_URL="https://github.com/HumanSignal/label-studio-ml-backend"
 PATCH_FILE="$SCRIPT_DIR/patches/grounding-dino-local-fixes.patch"
 PINNED_COMMIT="$(cat "$SCRIPT_DIR/patches/grounding-dino-local-fixes.commit")"
 
+if command -v podman >/dev/null 2>&1 && podman compose version >/dev/null 2>&1; then
+  COMPOSE=(podman compose)
+else
+  COMPOSE=(docker compose)
+fi
+
 clone_ml_backend_repo() {
   if [ ! -d "$REPO_DIR" ]; then
     echo "==> Cloning label-studio-ml-backend..."
@@ -59,7 +65,7 @@ EOF
 
 start_services() {
   echo "==> Building and starting services..."
-  docker compose up -d --build
+  "${COMPOSE[@]}" up -d --build
 }
 
 verify_label_studio_auth() {
@@ -98,7 +104,7 @@ wait_for_grounding_dino_healthy() {
   if [ "$ready" = true ]; then
     echo "==> grounding-dino-ml-backend is up."
   else
-    echo "WARNING: grounding-dino-ml-backend did not report healthy within 5 minutes. Check: docker compose logs grounding-dino-ml-backend" >&2
+    echo "WARNING: grounding-dino-ml-backend did not report healthy within 5 minutes. Check: ${COMPOSE[*]} logs grounding-dino-ml-backend" >&2
   fi
 }
 
