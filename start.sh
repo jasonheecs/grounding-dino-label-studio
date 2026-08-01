@@ -45,7 +45,7 @@ generate_env_if_missing() {
     echo "==> No .env found, generating fresh Label Studio credentials..."
     local gen_username="admin@myhost.local"
     local gen_password
-    gen_password="$(openssl rand -base64 24)"
+    gen_password="$(LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 12)"
     local gen_token
     gen_token="$(openssl rand -hex 20)"
     cat >"$SCRIPT_DIR/.env" <<EOF
