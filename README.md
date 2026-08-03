@@ -5,6 +5,10 @@ Local Label Studio deployment with a zero-shot object detection ML backend
 labeling bounding boxes on images. Grounding DINO detects objects from a
 free-text prompt (e.g. `watermelon.`).
 
+
+https://github.com/user-attachments/assets/43a96c53-f3b3-4646-8f92-0d12ae7b1ced
+
+
 ## Prerequisites
 - `docker compose` or `podman compose` — `start.sh` prefers Podman if it's installed and its machine/socket is running, otherwise falls back to Docker. If you have Podman installed but see `docker: command not found`, run `podman machine start` first.
 
