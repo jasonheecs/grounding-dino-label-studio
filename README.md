@@ -6,7 +6,9 @@ labeling bounding boxes on images. Grounding DINO detects objects from a
 free-text prompt (e.g. `watermelon.`).
 
 
-https://github.com/user-attachments/assets/43a96c53-f3b3-4646-8f92-0d12ae7b1ced
+
+https://github.com/user-attachments/assets/c96e93cc-31fd-42b7-951f-6d7482e06487
+
 
 
 ## Prerequisites
